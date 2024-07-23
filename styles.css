@@ -1,0 +1,73 @@
+/* General */
+
+*{
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body{
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    background-image: url("img/fondo.png");
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-size: cover;
+}
+
+/* Contenedor */
+
+.contenedor-principal{
+    width: 80vw;
+    max-width: 600px;
+    min-height: 350px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    border-radius: 10%;
+    border: 2px solid burlywood;
+    background-color: whitesmoke ;
+}
+.contenedor-botones{
+    padding: 20px;
+
+}
+
+/* Cronometro */
+
+#cronometro{
+    width: 100%;
+    font-size: 4em;
+    font-weight: bold;
+    user-select: none;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Botones */
+.boton{
+    width: 80px;
+    font-size: 2em;
+    margin: 10px;
+    padding: 10px;
+    border-radius: 10%;
+    cursor: pointer;
+}
+
+#boton-inicio-pausa.iniciar,
+#boton-inicio-pausa.iniciar i {
+    background-color: #08e008;
+}
+
+#boton-inicio-pausa.pausar,
+#boton-inicio-pausa.pausar i{
+    background-color: #ffdc00;
+}
+
+#boton-reiniciar{
+    background-color: red;
+}
+
