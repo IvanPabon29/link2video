@@ -34,7 +34,6 @@ body{
 }
 .contenedor-botones{
     padding: 20px;
-
 }
 
 /* Cronometro */
@@ -60,14 +59,27 @@ body{
 #boton-inicio-pausa.iniciar,
 #boton-inicio-pausa.iniciar i {
     background-color: #08e008;
+    border: none;
 }
 
 #boton-inicio-pausa.pausar,
 #boton-inicio-pausa.pausar i{
     background-color: #ffdc00;
+    border: none;
 }
 
 #boton-reiniciar{
     background-color: red;
+    border: none;
 }
 
+/* Botones Hover */
+#boton-inicio-pausa.iniciar:hover{
+    box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.8);
+}
+#boton-inicio-pausa.pausar{
+    box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.8);
+}
+#boton-reiniciar:hover{
+    box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.8);
+}
