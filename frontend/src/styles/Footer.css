@@ -1,0 +1,17 @@
+/* ==========================
+    Footer Styles
+   ========================== */
+
+.footer {
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.footer .social-icons a {
+  font-size: 1.2rem;
+  transition: 0.3s;
+}
+
+.footer .social-icons a:hover {
+  color: #0d6efd !important;
+}

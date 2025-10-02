@@ -1,0 +1,29 @@
+/* ==========================
+    Header Styles
+   ========================== */
+
+.navbar-brand {
+  font-size: 1.5rem;
+  color: #ffffff !important;
+  transition: 0.3s;
+}
+
+.navbar-brand:hover {
+  color: #0d6efd !important;
+}
+
+.nav-link {
+  font-size: 1rem;
+  margin-right: 10px;
+  transition: 0.3s;
+}
+
+.nav-link:hover {
+  color: #0d6efd !important;
+}
+
+.navbar .btn {
+  border-radius: 20px;
+  font-size: 0.9rem;
+  padding: 5px 15px;
+}
