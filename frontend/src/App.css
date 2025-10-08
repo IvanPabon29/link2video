@@ -1,20 +1,39 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+/* ==========================
+    Global Styles - Link2Video
+   ==========================
+   Este archivo contiene:
+   - Reset de estilos básicos
+   - Variables globales
+   - Tipografía
+   ========================== */
+
+/* Variables globales */
+:root {
+  --color-primary: #646cff;
+  --color-secondary: #535bf2;
+  --color-bg-dark: #242424;
+  --color-bg-light: #ffffff;
+  --color-text-dark: #213547;
+  --color-text-light: rgba(255, 255, 255, 0.87);
+  --font-family-base: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  --transition: all 0.3s ease-in-out;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+/* Reset básico */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
+body {
+  font-family: var(--font-family-base);
+  line-height: 1.5;
+  font-weight: 400;
+  background-color: var(--color-bg-dark);
+  color: var(--color-text-light);
+  min-width: 320px;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
