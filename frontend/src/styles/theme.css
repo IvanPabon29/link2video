@@ -1,0 +1,29 @@
+/* ================================================
+    Archivo: theme.css
+   Descripción: Variables globales de color, fuente
+   y transiciones para Link2Video.
+   ================================================= */
+
+:root {
+  /* ======== Paleta principal ======== */
+  --color-primary: #646cff;      /* Azul principal (resalta enlaces y botones) */
+  --color-secondary: #535bf2;    /* Azul secundario */
+  --color-accent: #00c9a7;       /* Verde azulado para resaltar acciones */
+
+  /* ======== Fondos ======== */
+  --color-bg-dark: #181818;      /* Fondo oscuro para header/footer */
+  --color-bg-light: #ffffff;     /* Fondo claro para el contenido principal */
+  --color-bg-muted: #f5f5f5;     /* Gris suave para secciones alternas */
+
+  /* ======== Texto ======== */
+  --color-text-dark: #212529;
+  --color-text-light: #f8f9fa;
+  --color-text-muted: #6c757d;
+
+  /* ======== Tipografía ======== */
+  --font-family-base: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+
+  /* ======== Transiciones ======== */
+  --transition-fast: all 0.2s ease-in-out;
+  --transition-medium: all 0.3s ease-in-out;
+}
