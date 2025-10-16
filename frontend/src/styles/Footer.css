@@ -1,17 +1,45 @@
-/* ==========================
-    Footer Styles
-   ========================== */
+/* ==========================================
+   Footer Styles - Link2Video
+   ==========================================
+   - Define el diseño y comportamiento del pie de página.
+   - Totalmente responsive y consistente con el tema global.
+   ========================================== */
 
 .footer {
-  text-align: center;
-  font-size: 0.9rem;
+  background-color: var(--color-bg-dark);
+  color: var(--color-text-light);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  transition: var(--transition);
 }
 
+.footer .brand {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.footer .brand:hover {
+  color: var(--color-secondary);
+}
+
+/* ===== Redes sociales ===== */
 .footer .social-icons a {
-  font-size: 1.2rem;
-  transition: 0.3s;
+  color: var(--color-text-light);
+  font-size: 1.3rem;
+  transition: color 0.3s ease, transform 0.2s ease;
 }
 
 .footer .social-icons a:hover {
-  color: #0d6efd !important;
+  color: var(--color-primary);
+  transform: scale(1.15);
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 768px) {
+  .footer {
+    text-align: center;
+  }
+
+  .footer .social-icons {
+    margin-top: 0.5rem;
+  }
 }
