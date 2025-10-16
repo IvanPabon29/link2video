@@ -1,29 +1,61 @@
-/* ==========================
-    Header Styles
-   ========================== */
+/* ==========================================
+   Header Styles - Link2Video
+   ==========================================
+   Este archivo define los estilos personalizados 
+   para la barra de navegación superior.
+   ------------------------------------------
+   - Totalmente responsive
+   - Integración sin conflicto con Bootstrap
+   - Animaciones suaves
+   ========================================== */
 
+/* Ajustes base del navbar */
+.custom-navbar {
+  background-color: var(--color-bg-dark);
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Marca (logo o nombre) */
 .navbar-brand {
-  font-size: 1.5rem;
-  color: #ffffff !important;
-  transition: 0.3s;
+  color: var(--color-primary) !important;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  transition: var(--transition-fast);
 }
 
 .navbar-brand:hover {
-  color: #0d6efd !important;
+  color: var(--color-secondary) !important;
 }
 
+/* Enlaces del menú */
 .nav-link {
-  font-size: 1rem;
-  margin-right: 10px;
-  transition: 0.3s;
+  color: var(--color-text-light) !important;
+  font-weight: 500;
+  transition: color 0.2s ease-in-out;
 }
 
-.nav-link:hover {
-  color: #0d6efd !important;
+.nav-link:hover,
+.nav-link.active {
+  color: var(--color-primary) !important;
 }
 
-.navbar .btn {
-  border-radius: 20px;
-  font-size: 0.9rem;
-  padding: 5px 15px;
+/* Efecto al hacer scroll */
+.navbar.scrolled {
+  background-color: rgba(24, 24, 24, 0.95) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(6px);
+}
+
+/* Responsive: menú en pantallas pequeñas */
+@media (max-width: 991px) {
+  .navbar-collapse {
+    background-color: var(--color-bg-dark);
+    padding: 1rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  }
+
+  .nav-link {
+    padding: 0.5rem 0;
+  }
 }
