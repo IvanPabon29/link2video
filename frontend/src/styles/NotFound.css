@@ -1,0 +1,92 @@
+/* =======================================================
+   Página: NotFound (404)
+   Descripción:
+   Estilos coherentes con el tema global de Link2Video.
+   Uso de variables de theme.css para colores, fuentes y transiciones.
+   ======================================================= */
+
+.notfound-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-bg-muted);
+  padding: 2rem;
+  font-family: var(--font-family-base);
+}
+
+.notfound-content {
+  text-align: center;
+  background-color: var(--color-bg-light);
+  border-radius: 1rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  padding: 3rem 2rem;
+  max-width: 420px;
+  width: 100%;
+  animation: fadeIn 0.8s ease;
+}
+
+.notfound-icon {
+  font-size: 3.5rem;
+  color: var(--color-accent);
+  margin-bottom: 1rem;
+}
+
+.notfound-title {
+  font-size: 4rem;
+  font-weight: 800;
+  color: var(--color-text-dark);
+  margin: 0;
+}
+
+.notfound-text {
+  font-size: 1.1rem;
+  color: var(--color-text-muted);
+  margin: 1rem 0 2rem;
+  line-height: 1.5;
+}
+
+.notfound-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-primary);
+  color: var(--color-text-light);
+  text-decoration: none;
+  padding: 0.7rem 1.4rem;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: var(--transition-medium);
+}
+
+.notfound-btn:hover {
+  background-color: var(--color-text-dark);
+  transform: translateY(-2px);
+}
+
+/* ===== Animación ===== */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ===== Responsividad ===== */
+@media (max-width: 480px) {
+  .notfound-title {
+    font-size: 3rem;
+  }
+
+  .notfound-content {
+    padding: 2rem 1.5rem;
+  }
+
+  .notfound-text {
+    font-size: 1rem;
+  }
+}
