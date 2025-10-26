@@ -1,23 +1,32 @@
 /* ==================================================
-     App.css
-   Estructura general del layout principal
+   App.css
+   Estructura base del layout principal del sitio
    ================================================== */
 
-.app-container {
+.app-layout {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
   background-color: var(--color-bg-light);
 }
 
-.app-main {
+/* Área donde viven las páginas */
+.app-content {
   flex: 1;
-  padding-top: 80px; /* evita que el header tape el contenido */
+  display: flex;
+  flex-direction: column;
+  padding: 0; /* Quitamos márgenes globales */
 }
 
-/* En pantallas pequeñas reduce el margen */
-@media (max-width: 768px) {
-  .app-main {
-    padding-top: 60px;
-  }
+/* Permite que páginas internas usen 100% del espacio */
+.app-content > * {
+  flex: 1;
+  width: 100%;
+}
+
+/* Ajuste opcional si tu header es fijo */
+body {
+  margin: 0;
+  font-family: var(--font-family-base);
+  background-color: var(--color-bg-light);
 }
