@@ -1,0 +1,104 @@
+/* =======================================================
+   Estilos: About.css
+   Descripción:
+   Estilos coherentes con el tema global (theme.css)
+   para la página "Acerca de".
+   ======================================================= */
+
+.about-section {
+  background-color: var(--color-bg-muted);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 1.5rem;
+  font-family: var(--font-family-base);
+}
+
+.about-container {
+  background-color: var(--color-bg-light);
+  border-radius: 1rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  padding: 3rem;
+  max-width: 1100px;
+  width: 100%;
+  animation: fadeIn 0.8s ease;
+}
+
+.about-title {
+  text-align: center;
+  color: var(--color-primary);
+  font-weight: 700;
+  font-size: 2.2rem;
+  margin-bottom: 0.5rem;
+}
+
+.about-subtitle {
+  text-align: center;
+  color: var(--color-text-muted);
+  margin-bottom: 3rem;
+  line-height: 1.6;
+}
+
+/* ===== Grid de valores ===== */
+.about-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 2rem;
+}
+
+/* ===== Tarjeta individual ===== */
+.about-card {
+  background-color: var(--color-bg-light);
+  border: 1px solid #e6e6e6;
+  border-radius: 1rem;
+  padding: 2rem 1.5rem;
+  text-align: center;
+  transition: var(--transition-medium);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+}
+
+.about-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+/* ===== Íconos ===== */
+.about-icon {
+  font-size: 2.5rem;
+  color: var(--color-accent);
+  margin-bottom: 1rem;
+}
+
+/* ===== Títulos y texto ===== */
+.about-card-title {
+  color: var(--color-text-dark);
+  font-weight: 600;
+  font-size: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.about-card-text {
+  color: var(--color-text-muted);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+/* ===== Animación ===== */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 768px) {
+  .about-container {
+    padding: 2rem;
+  }
+}
