@@ -1,0 +1,162 @@
+/* =======================================================
+   Estilos: Home.css
+   Descripción:
+   Estilos para la página principal (Home). Incluye
+   hero, características, pasos y sección CTA.
+   ======================================================= */
+
+/* ===== ESTRUCTURA GENERAL ===== */
+.home-section {
+  background-color: var(--color-bg-light);
+  min-height: 100vh;
+  padding-bottom: 3rem;
+}
+
+.home-container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* ===== HERO PRINCIPAL ===== */
+.hero {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+  color: var(--color-text-light);
+  padding: 6rem 1.5rem 5rem;
+  border-radius: 0 0 2rem 2rem;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+}
+
+.hero-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+}
+
+.hero-title span {
+  color: var(--color-accent);
+}
+
+.hero-text {
+  font-size: 1.1rem;
+  margin-top: 1rem;
+  margin-bottom: 2rem;
+}
+
+/* ===== FORMULARIO HERO ===== */
+.hero-form {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.hero-input {
+  width: 60%;
+  max-width: 480px;
+  padding: 0.8rem 1rem;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  font-size: 1rem;
+  outline: none;
+  transition: var(--transition-fast);
+}
+
+.hero-input:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 6px rgba(0, 160, 81, 0.3);
+}
+
+.hero-btn {
+  background-color: var(--color-accent);
+  color: var(--color-text-light);
+  border: none;
+  border-radius: 8px;
+  padding: 0.8rem 1.4rem;
+  font-weight: 500;
+  transition: var(--transition-medium);
+}
+
+.hero-btn:hover {
+  background-color: var(--color-secondary);
+  transform: translateY(-2px);
+}
+
+/* ===== FEATURES SECTION ===== */
+.features-section {
+  padding: 5rem 1.5rem;
+  background-color: var(--color-bg-muted);
+}
+
+.section-title {
+  color: var(--color-primary);
+  font-weight: 700;
+  font-size: 2rem;
+}
+
+.feature-item {
+  padding: 1rem;
+}
+
+.feature-icon {
+  font-size: 2.5rem;
+  color: var(--color-accent);
+  margin-bottom: 1rem;
+}
+
+/* ===== PASOS ===== */
+.steps-section {
+  padding: 5rem 1.5rem;
+  background-color: var(--color-bg-light);
+}
+
+.step-item {
+  padding: 1rem;
+}
+
+.step-circle {
+  width: 60px;
+  height: 60px;
+  background-color: var(--color-primary);
+  color: #fff;
+  border-radius: 50%;
+  margin: 0 auto 1rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ===== CTA FINAL ===== */
+.cta-section {
+  background: var(--color-primary);
+  color: var(--color-text-light);
+  padding: 4rem 1.5rem;
+}
+
+.cta-btn {
+  background-color: var(--color-accent);
+  color: var(--color-text-light);
+  border: none;
+  border-radius: 8px;
+  padding: 0.9rem 1.6rem;
+  font-weight: 500;
+  margin-top: 1.5rem;
+  transition: var(--transition-medium);
+}
+
+.cta-btn:hover {
+  background-color: var(--color-secondary);
+  transform: translateY(-2px);
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+  .hero-input {
+    width: 100%;
+  }
+
+  .hero-title {
+    font-size: 2rem;
+  }
+}
