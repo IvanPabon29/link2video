@@ -39,7 +39,7 @@ function Home() {
             Descarga tus videos favoritos <span>rápido y fácil</span>
           </h1>
           <p className="hero-text">
-            Convierte y descarga videos de YouTube, TikTok, Instagram y más,
+            Convierte y descarga videos de YouTube, TikTok, Instagram, Facebook, X y más,
             sin instalar nada.
           </p>
 
@@ -47,6 +47,7 @@ function Home() {
           <form className="hero-form" onSubmit={handleSubmit}>
             <input
               type="url"
+              id="link"
               placeholder="Pega aquí el enlace del video..."
               className="hero-input"
               value={videoURL}
