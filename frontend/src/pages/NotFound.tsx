@@ -11,7 +11,7 @@ import "../styles/NotFound.css";
 
 function NotFound() {
   return (
-    <div className="notfound-container">
+    <section className="notfound-container">
       <div className="notfound-content">
         <i className="bi bi-exclamation-triangle notfound-icon"></i>
         <h1 className="notfound-title">404</h1>
@@ -22,7 +22,7 @@ function NotFound() {
           Volver al inicio
         </Link>
       </div>
-    </div>
+    </section>
   );
 }
 
