@@ -1,33 +1,25 @@
 """
 app/core/config.py
-Configuración central del proyecto. Lee variables desde .env cuando
-existe (usando python-dotenv a través de pydantic BaseSettings).
+Configuración central del backend Link2Video.
+Carga las variables de entorno y expone la configuración global.
 """
 
-from pydantic import BaseSettings, AnyUrl
-from typing import List
-
+from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     APP_NAME: str = "Link2Video API"
     DEBUG: bool = True
+    VERSION: str = "1.0.0"
 
-    # MongoDB URI (ej: mongodb://user:pass@localhost:27017/link2video)
-    MONGODB_URI: str = "mongodb://127.0.0.1:27017"
-    MONGODB_DB: str = "link2video"
+    # Configuración de MongoDB
+    MONGODB_URL: str
+    MONGODB_DB_NAME: str
 
-    # Carpeta base para archivos temporales (descargas / salidas)
-    DOWNLOADS_DIR: str = "./app/static/downloads"
-
-    # Orígenes permitidos en CORS (ajusta en producción)
-    ALLOWED_ORIGINS: List[str] = ["http://localhost:5173", "http://localhost:3000"]
-
-    # Tiempo (s) para mantener archivos temporales antes de borrarlos si implementas limpieza
-    TEMP_FILE_TTL_SECONDS: int = 300
+    # CORS
+    ALLOWED_ORIGINS: list[str] = ["http://localhost:5173"]
 
     class Config:
         env_file = ".env"
-        env_file_encoding = "utf-8"
 
-
+# Instancia global de configuración
 settings = Settings()
