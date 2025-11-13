@@ -16,7 +16,6 @@ import datetime
 import yt_dlp
 import subprocess
 from bson import ObjectId
-from fastapi import HTTPException
 from app.database.connection import db
 from app.core.config import settings
 from app.models.video_model import VideoModel
@@ -30,23 +29,27 @@ os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 #  FUNCIÓN PRINCIPAL
 
-async def process_video(url: str, format: str = "mp4", quality: str = "720p"):
+async def process_video(url, format="mp4", quality="1080p"):
     """
     Descarga y convierte un video desde YouTube, TikTok, etc.
     usando yt-dlp y ffmpeg.
+    Este proceso es ejecutado en segundo plano (background task).
 
     Args:
         url (str): Enlace del video.
         format (str): Formato de salida (mp4, mp3, webm, etc.).
         quality (str): Resolución deseada (480p, 720p, 1080p, etc.).
 
-    Raises:
-        HTTPException: si ocurre un error durante la descarga o conversión.
     """
+    # Convertir SIEMPRE a string — evita errores con HttpUrl
+    url = str(url)
+    format = str(format)
+    quality = str(quality)
 
     try:
         # === Extraer metadatos del video ===
         ydl_opts_info = {"quiet": True, "skip_download": True}
+
         with yt_dlp.YoutubeDL(ydl_opts_info) as ydl:
             info = ydl.extract_info(url, download=False)
             title = info.get("title", "video_sin_titulo").replace("/", "_")
@@ -58,7 +61,7 @@ async def process_video(url: str, format: str = "mp4", quality: str = "720p"):
 
         # === Configurar opciones de descarga ===
         ydl_opts = {
-            "format": "bestvideo[height<=1080]+bestaudio/best",
+            "format": "bestvideo+bestaudio/best",
             "outtmpl": filepath,
             "quiet": True,
             "merge_output_format": ext
@@ -73,6 +76,7 @@ async def process_video(url: str, format: str = "mp4", quality: str = "720p"):
             converted_filename = f"{title}.{format}"
             converted_filepath = os.path.join(DOWNLOAD_DIR, converted_filename)
 
+            # Comando limpio y compatible:
             command = [
                 "ffmpeg",
                 "-i", filepath,
@@ -88,11 +92,12 @@ async def process_video(url: str, format: str = "mp4", quality: str = "720p"):
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE
             )
-
             stdout, stderr = await process.communicate()
-            if process.returncode != 0:
-                raise Exception(f"Error en FFmpeg: {stderr.decode()}")
 
+            if process.returncode != 0:
+                print("Error en FFmpeg:", stderr.decode())
+                return {"message": "Error en la conversión de video"}
+            
             # Eliminar el archivo original si se creó la conversión
             if os.path.exists(filepath):
                 os.remove(filepath)
@@ -117,7 +122,6 @@ async def process_video(url: str, format: str = "mp4", quality: str = "720p"):
 
     except Exception as e:
         print(f" Error procesando video: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 #  LISTAR VIDEOS GUARDADOS
