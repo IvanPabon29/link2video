@@ -41,4 +41,4 @@ class VideoResponse(BaseModel):
             datetime: lambda v: v.isoformat(),
             ObjectId: str
         }
-        orm_mode = True
+        from_attributes = True
