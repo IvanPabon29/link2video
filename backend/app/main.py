@@ -6,6 +6,7 @@ Inicia FastAPI, configura CORS, eventos y registra routers.
 """
 
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
 # Importaciones locales
@@ -28,6 +29,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+#  Montar archivos estáticos
+app.mount("/downloads", StaticFiles(directory="downloads"), name="downloads")
 
 #  Eventos de conexión MongoDB
 @app.on_event("startup")
