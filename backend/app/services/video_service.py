@@ -19,6 +19,7 @@ from bson import ObjectId
 from fastapi import HTTPException
 from app.database.connection import db
 from app.core.config import settings
+from app.models.video_model import VideoModel
 
 
 #  CONFIGURACIÓN GENERAL
@@ -100,19 +101,19 @@ async def process_video(url: str, format: str = "mp4", quality: str = "720p"):
             filename = converted_filename
 
         # === Guardar metadatos en MongoDB ===
-        video_doc = {
-            "title": title,
-            "filename": filename,
-            "format": format,
-            "quality": quality,
-            "platform": platform,
-            "download_url": f"/downloads/{filename}",
-            "created_at": datetime.datetime.utcnow()
-        }
+        video_doc = VideoModel(
+            title=title,
+            filename=filename,
+            format=format,
+            quality=quality,
+            platform=platform,
+            download_url=f"/downloads/{filename}",
+            created_at=datetime.datetime.utcnow(),
+        )
 
-        await db["videos"].insert_one(video_doc)
-
+        await db["videos"].insert_one(video_doc.model_dump(by_alias=True))
         print(f" Video procesado y guardado: {filename}")
+        return {"message": "Video procesado correctamente", "filename": filename}
 
     except Exception as e:
         print(f" Error procesando video: {str(e)}")
