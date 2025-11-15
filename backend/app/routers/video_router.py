@@ -20,6 +20,7 @@ from fastapi.responses import JSONResponse
 from bson import ObjectId
 from app.services.video_service import process_video, list_videos_db, delete_video_db
 from app.models.video_schema import VideoDownloadRequest, VideoResponse
+
 router = APIRouter()
 
 
@@ -38,10 +39,10 @@ async def download_video(request: VideoDownloadRequest, background_tasks: Backgr
     """
     try:
         background_tasks.add_task(process_video, request.url, request.format, request.quality)
-        return JSONResponse(
-            status_code=status.HTTP_202_ACCEPTED,
-            content={"message": "Procesamiento iniciado", "url": request.url}
-        )
+        return {
+            "message": "Procesamiento iniciado",
+            "url": str(request.url)
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al procesar el video: {str(e)}")
 
