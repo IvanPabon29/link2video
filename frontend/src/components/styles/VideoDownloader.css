@@ -1,0 +1,66 @@
+/*
+  VideoDownloader.css
+  -------------------------------------------
+  Estilos principales para el componente 
+  VideoDownloader. Diseño limpio, centrado
+  y con buena responsividad.
+*/
+
+.video-downloader-container {
+  width: 100%;
+  max-width: 680px;
+  margin: 2.5rem auto;
+  padding: 1.5rem;
+  background: var(--color-bg-card);
+  border-radius: 12px;
+  box-shadow: var(--shadow-md);
+  animation: fadeIn 0.3s ease;
+}
+
+.video-title {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--color-primary);;
+}
+
+.video-input {
+  width: 100%;
+  padding: 0.9rem;
+  font-size: 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  margin-bottom: 1rem;
+  outline: none;
+  transition: border 0.3s ease;
+}
+
+.video-input:focus {
+  border-color: var(--color-accent);
+}
+
+.video-btn {
+  width: 100%;
+  padding: 0.9rem 1.6rem;
+  border-radius: 8px;
+  font-weight: 600;
+  background-color: var(--color-accent);
+  color: var(--color-text-light);
+  border: none;
+  cursor: pointer;
+  transition: var(--transition-medium);
+}
+
+.video-btn:hover {
+  background-color: var(--color-text-light);
+  color: var(--color-accent);
+  transform: translateY(-2px);
+}
+
+/* Animación suave */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
