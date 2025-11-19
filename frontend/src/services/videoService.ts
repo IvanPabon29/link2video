@@ -1,74 +1,65 @@
 /*
   videoService.ts
   --------------------------------------
-  Servicio para manejar las peticiones relacionadas con videos
-  hacia el backend.
+  Servicio para manejar las peticiones del frontend hacia el backend
+  relacionadas con la obtención de info del video y la descarga.
 */
 
 import apiClient from "./apiConfig";
 
-// Tipos para la solicitud
-export interface VideoDownloadPayload {
-  url: string;
-  format?: string;
-  quality?: string;
+//  1. Tipos de datos y payloads
+
+export interface VideoInfoResponse {
+  title: string;
+  thumbnail: string;
+  duration: string;
+
+  formats: Array<{
+    format: string;      // mp4, webm, mp3, wav, etc
+    quality: string;     // 720p, 1080p, 1440p, 4k, 128kbps, etc
+    size?: string;       // "40 MB"
+    codec?: string;
+    fps?: number;
+    type: "audio" | "video";
+  }>;
 }
 
-// Tipo para cada video en el backend
-export interface VideoData {
-  id: string;
-  title: string;
-  filename: string;
+export interface DownloadPayload {
+  url: string;
   format: string;
   quality: string;
-  platform: string;
-  download_url: string;
-  created_at: string;
 }
 
-// Servicio principal con todas las funciones del frontend
+export interface DownloadResponse {
+  download_url: string;
+  filename: string;
+}
+
+
+//  2. Servicio principal 
+
 export const videoService = {
+
   /**
-   * 1 Descargar/procesar un video
+   * 1. Obtener información y formatos del video
    */
-  async downloadVideo(payload: VideoDownloadPayload): Promise<VideoData> {
-    try {
-      const response = await apiClient.post<VideoData>(
-        "/video/download",
-        payload
-      );
-      return response.data;
-    } catch (error: any) {
-      console.error("Error en downloadVideo:", error);
-      throw error.response?.data || error;
-    }
+  async getVideoInfo(url: string): Promise<VideoInfoResponse> {
+    const response = await apiClient.post<VideoInfoResponse>(
+      "/video/info",
+      { url }
+    );
+    return response.data;
   },
 
   /**
-   * 2 Obtener todos los videos guardados
+   * 2. Descargar el formato/calidad elegida
    */
-  async getVideos(): Promise<VideoData[]> {
-    try {
-      const response = await apiClient.get<VideoData[]>("/video");
-      return response.data;
-    } catch (error: any) {
-      console.error("Error en getVideos:", error);
-      throw error.response?.data || error;
-    }
-  },
-
-  /**
-   * 3 Eliminar un video por ID
-   */
-  async deleteVideo(id: string): Promise<{ message: string }> {
-    try {
-      const response = await apiClient.delete<{ message: string }>(
-        `/video/${id}`
-      );
-      return response.data;
-    } catch (error: any) {
-      console.error("Error en deleteVideo:", error);
-      throw error.response?.data || error;
-    }
-  },
+  async downloadVideo(payload: DownloadPayload): Promise<DownloadResponse> {
+    const response = await apiClient.post<DownloadResponse>(
+      "/video/download",
+      payload
+    );
+    return response.data;
+  }
+  
 };
