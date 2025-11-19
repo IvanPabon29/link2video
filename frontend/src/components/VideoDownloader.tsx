@@ -1,152 +1,135 @@
-/* =======================================================
-   Componente: VideoDownloader.tsx
-   Descripción:
-   - Permite al usuario pegar un enlace
-   - Obtiene la información del video desde el backend
-   - Muestra formatos disponibles
-   - Permite descargar el formato elegido
-   ======================================================= */
+/*
+  VideoDownloader.tsx
+  --------------------------------------------------------
+  Componente principal del flujo de descarga:
+  1. El usuario ingresa un enlace de YouTube.
+  2. Se consulta la API → getVideoInfo().
+  3. Se muestra la tarjeta con la información del video.
+  4. Se listan los formatos disponibles.
+  5. Al seleccionar un formato, se solicita la descarga → downloadVideo().
+  6. Se abre el archivo automáticamente.
+
+  Este componente NO guarda historial, ni elimina nada,
+  pues el backend eliminará el archivo al finalizar la descarga.
+*/
 
 import { useState } from "react";
-import { videoService } from "../services/videoService"; 
-import "./styles/VideoDownloader.css"; // 
+import { videoService } from "../services/videoService";
 
-function VideoDownloader() {
-  /* ----------------------------------------
-     Estados
-     ---------------------------------------- */
-  const [url, setUrl] = useState("");
-  const [loadingInfo, setLoadingInfo] = useState(false);
-  const [loadingDownload, setLoadingDownload] = useState(false);
+import VideoInfoCard from "./VideoInfoCard";
+import FormatList from "./FormatList";
 
-  const [videoInfo, setVideoInfo] = useState<any>(null);
+import "./styles/VideoDownloader.css";
+
+interface VideoFormat {
+  format: string;       // mp4 | mp3 | webm | wav...
+  quality: string;     // 720p | 1080p | 2K | 4K...
+}
+
+const VideoDownloader = () => {
+  // URL ingresada por el usuario
+  const [videoUrl, setVideoUrl] = useState("");
+
+  // Información retornada por el backend
+  const [videoInfo, setVideoInfo] = useState<{
+    title: string;
+    thumbnail: string;
+    duration: string;
+    formats: VideoFormat[];
+  } | null>(null);
+
+  // Estado de carga
+  const [loading, setLoading] = useState(false);
+
+  // Errores
   const [error, setError] = useState("");
 
-  /* 1. Obtener información del video */
-  const handleGetInfo = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!url.trim()) {
+  /**
+   * Consulta la API para obtener información del video
+   */
+  const handleFetchInfo = async () => {
+    if (!videoUrl.trim()) {
       setError("Por favor ingresa un enlace válido.");
       return;
     }
 
+    setError("");
+    setLoading(true);
+
     try {
-      setError("");
-      setLoadingInfo(true);
-
-      const info = await videoService.getVideoInfo(url);
+      const info = await videoService.getVideoInfo(videoUrl);
       setVideoInfo(info);
-
     } catch (err) {
       setError("No se pudo obtener la información del video.");
-      console.error(err);
     } finally {
-      setLoadingInfo(false);
+      setLoading(false);
     }
   };
 
-  /* 2. Descargar formato seleccionado */
-  const handleDownload = async (format: string, quality: string) => {
+  /**
+   * Solicita la descarga con el formato seleccionado
+   */
+  const handleDownload = async (format: VideoFormat) => {
     try {
-      setLoadingDownload(true);
-      setError("");
+      setLoading(true);
 
       const response = await videoService.downloadVideo({
-        url,
-        format,
-        quality
+        url: videoUrl,
+        format: format.format,
+        quality: format.quality,
       });
 
-      // Iniciar descarga automática
-      window.open(response.download_url, "_blank");
-
-    } catch (err) {
-      setError("Error al procesar la descarga.");
-      console.error(err);
+      // Descargar el archivo
+      const a = document.createElement("a");
+      a.href = response.download_url;
+      a.download = response.filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } catch {
+      setError("No se pudo iniciar la descarga.");
     } finally {
-      setLoadingDownload(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="video-downloader container mt-5">
+    <div className="video-downloader-container">
+      <h2 className="video-title">Descargar Video / Audio</h2>
 
-      {/* ===== FORMULARIO ===== */}
-      <form onSubmit={handleGetInfo} className="mb-4 text-center">
-        <h2 className="mb-3">Descargar Video</h2>
+      {/* Campo de texto */}
+      <input
+        type="text"
+        className="video-input"
+        placeholder="Ingresa el enlace del video Ej: Youtube, Tik Tok, Instagram..."
+        value={videoUrl}
+        onChange={(e) => setVideoUrl(e.target.value)}
+      />
 
-        <input
-          type="url"
-          className="form-control form-control-lg mb-3"
-          placeholder="Pega aquí el enlace..."
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          required
-        />
+      <button className="video-btn" onClick={handleFetchInfo}>
+        {loading ? "Cargando..." : "Obtener Video"}
+      </button>
 
-        <button
-          type="submit"
-          className="btn btn-primary btn-lg"
-          disabled={loadingInfo}
-        >
-          {loadingInfo ? "Procesando..." : "Obtener Información"}
-        </button>
+      {/* Error visual */}
+      {error && <p style={{ color: "red", marginTop: "1rem" }}>{error}</p>}
 
-        {error && <p className="text-danger mt-3">{error}</p>}
-      </form>
-
-      {/* ===== MOSTRAR INFO DEL VIDEO ===== */}
+      {/* Mostrar información del video */}
       {videoInfo && (
-        <div className="video-info card p-3 shadow-sm">
+        <>
+          <VideoInfoCard
+            thumbnail={videoInfo.thumbnail}
+            title={videoInfo.title}
+            duration={videoInfo.duration}
+          />
 
-          <div className="row">
-            <div className="col-md-4 text-center">
-              <img
-                src={videoInfo.thumbnail}
-                alt="Thumbnail"
-                className="img-fluid rounded"
-              />
-            </div>
-
-            <div className="col-md-8">
-              <h4>{videoInfo.title}</h4>
-              <p className="text-muted">Duración: {videoInfo.duration}</p>
-            </div>
-          </div>
-
-          <hr />
-
-          {/* ===== FORMATOS ===== */}
-          <h5 className="mt-3">Formatos disponibles</h5>
-
-          <div className="row">
-            {videoInfo.formats.map((item: any, idx: number) => (
-              <div key={idx} className="col-md-4 mt-3">
-
-                <button
-                  className="btn btn-outline-success w-100"
-                  disabled={loadingDownload}
-                  onClick={() => handleDownload(item.format, item.quality)}
-                >
-                  {item.type === "video" ? "📹" : "🎵"}  
-                  {item.format.toUpperCase()} — {item.quality}
-                  {item.size ? ` (${item.size})` : ""}
-                </button>
-
-              </div>
-            ))}
-          </div>
-
-          {loadingDownload && (
-            <p className="text-center mt-3 text-primary">
-              Preparando descarga...
-            </p>
-          )}
-        </div>
+          <FormatList
+            formats={videoInfo.formats}
+            onSelect={handleDownload}
+          />
+        </>
       )}
     </div>
   );
-}
+};
 
 export default VideoDownloader;
