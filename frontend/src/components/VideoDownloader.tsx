@@ -1,142 +1,152 @@
-/*
-  VideoDownloader.tsx
-  -------------------------------------------------
-  Componente encargado de:
-  - Recibir URL del video
-  - Seleccionar formato y calidad
-  - Llamar al backend mediante videoService
-  - Mostrar estado de carga y resultado
-*/
+/* =======================================================
+   Componente: VideoDownloader.tsx
+   Descripción:
+   - Permite al usuario pegar un enlace
+   - Obtiene la información del video desde el backend
+   - Muestra formatos disponibles
+   - Permite descargar el formato elegido
+   ======================================================= */
 
 import { useState } from "react";
-import { videoService, type VideoData } from "../services/videoService";
+import { videoService } from "../services/videoService"; 
+import "./styles/VideoDownloader.css"; // 
 
-const VideoDownloader = () => {
+function VideoDownloader() {
+  /* ----------------------------------------
+     Estados
+     ---------------------------------------- */
   const [url, setUrl] = useState("");
-  const [format, setFormat] = useState("mp4");
-  const [quality, setQuality] = useState("1080p");
+  const [loadingInfo, setLoadingInfo] = useState(false);
+  const [loadingDownload, setLoadingDownload] = useState(false);
 
-  const [loading, setLoading] = useState(false);
-  const [videoProcessed, setVideoProcessed] = useState<VideoData | null>(null);
+  const [videoInfo, setVideoInfo] = useState<any>(null);
   const [error, setError] = useState("");
 
-  const handleDownload = async () => {
+  /* 1. Obtener información del video */
+  const handleGetInfo = async (e: React.FormEvent) => {
+    e.preventDefault();
+
     if (!url.trim()) {
-      setError("Debes ingresar una URL válida.");
+      setError("Por favor ingresa un enlace válido.");
       return;
     }
 
-    setLoading(true);
-    setError("");
-    setVideoProcessed(null);
-
     try {
-      const result = await videoService.downloadVideo({
+      setError("");
+      setLoadingInfo(true);
+
+      const info = await videoService.getVideoInfo(url);
+      setVideoInfo(info);
+
+    } catch (err) {
+      setError("No se pudo obtener la información del video.");
+      console.error(err);
+    } finally {
+      setLoadingInfo(false);
+    }
+  };
+
+  /* 2. Descargar formato seleccionado */
+  const handleDownload = async (format: string, quality: string) => {
+    try {
+      setLoadingDownload(true);
+      setError("");
+
+      const response = await videoService.downloadVideo({
         url,
         format,
-        quality,
+        quality
       });
 
-      setVideoProcessed(result);
-    } catch (err: any) {
-      setError(err.detail || "Ocurrió un error procesando el video.");
-    }
+      // Iniciar descarga automática
+      window.open(response.download_url, "_blank");
 
-    setLoading(false);
+    } catch (err) {
+      setError("Error al procesar la descarga.");
+      console.error(err);
+    } finally {
+      setLoadingDownload(false);
+    }
   };
 
   return (
-    <div className="w-full max-w-xl mx-auto p-5 bg-white rounded-xl shadow-lg">
-      <h2 className="text-2xl font-bold text-center mb-4">
-        Descargar Video 🔽
-      </h2>
+    <div className="video-downloader container mt-5">
 
-      {/* URL INPUT */}
-      <label className="block text-sm font-medium mb-1">URL del video</label>
-      <input
-        type="text"
-        placeholder="Pega aquí el enlace de YouTube / TikTok / Instagram"
-        className="w-full border rounded-md px-3 py-2 mb-4"
-        value={url}
-        onChange={(e) => setUrl(e.target.value)}
-      />
+      {/* ===== FORMULARIO ===== */}
+      <form onSubmit={handleGetInfo} className="mb-4 text-center">
+        <h2 className="mb-3">Descargar Video</h2>
 
-      <div className="grid grid-cols-2 gap-4 mb-4">
-        {/* FORMATO */}
-        <div>
-          <label className="block text-sm font-medium mb-1">Formato</label>
-          <select
-            className="w-full border rounded-md px-2 py-2"
-            value={format}
-            onChange={(e) => setFormat(e.target.value)}
-          >
-            <option value="mp4">MP4</option>
-            <option value="mp3">MP3</option>
-            <option value="webm">WEBM</option>
-          </select>
-        </div>
+        <input
+          type="url"
+          className="form-control form-control-lg mb-3"
+          placeholder="Pega aquí el enlace..."
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          required
+        />
 
-        {/* CALIDAD */}
-        <div>
-          <label className="block text-sm font-medium mb-1">Calidad</label>
-          <select
-            className="w-full border rounded-md px-2 py-2"
-            value={quality}
-            onChange={(e) => setQuality(e.target.value)}
-          >
-            <option value="144p">144p</option>
-            <option value="360p">360p</option>
-            <option value="720p">720p</option>
-            <option value="1080p">1080p</option>
-          </select>
-        </div>
-      </div>
+        <button
+          type="submit"
+          className="btn btn-primary btn-lg"
+          disabled={loadingInfo}
+        >
+          {loadingInfo ? "Procesando..." : "Obtener Información"}
+        </button>
 
-      {/* BOTÓN */}
-      <button
-        disabled={loading}
-        onClick={handleDownload}
-        className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition disabled:bg-gray-400"
-      >
-        {loading ? "Procesando..." : "Descargar Video"}
-      </button>
+        {error && <p className="text-danger mt-3">{error}</p>}
+      </form>
 
-      {/* ERROR */}
-      {error && (
-        <p className="text-red-500 text-center mt-3 font-medium">{error}</p>
-      )}
+      {/* ===== MOSTRAR INFO DEL VIDEO ===== */}
+      {videoInfo && (
+        <div className="video-info card p-3 shadow-sm">
 
-      {/* RESULTADO */}
-      {videoProcessed && (
-        <div className="mt-6 p-4 border rounded-md bg-gray-50">
-          <h3 className="font-bold text-lg mb-2">
-            Video procesado correctamente ✅
-          </h3>
+          <div className="row">
+            <div className="col-md-4 text-center">
+              <img
+                src={videoInfo.thumbnail}
+                alt="Thumbnail"
+                className="img-fluid rounded"
+              />
+            </div>
 
-          <p>
-            <strong>Título:</strong> {videoProcessed.title}
-          </p>
-          <p>
-            <strong>Formato:</strong> {videoProcessed.format}
-          </p>
-          <p>
-            <strong>Calidad:</strong> {videoProcessed.quality}
-          </p>
-          <p>
-            <strong>Plataforma:</strong> {videoProcessed.platform}
-          </p>
+            <div className="col-md-8">
+              <h4>{videoInfo.title}</h4>
+              <p className="text-muted">Duración: {videoInfo.duration}</p>
+            </div>
+          </div>
 
-          <a
-            href={videoProcessed.download_url}
-            download
-            className="mt-4 block bg-green-600 text-white text-center py-2 rounded-md font-semibold hover:bg-green-700 transition"
-          >
-            Descargar archivo
-          </a>
+          <hr />
+
+          {/* ===== FORMATOS ===== */}
+          <h5 className="mt-3">Formatos disponibles</h5>
+
+          <div className="row">
+            {videoInfo.formats.map((item: any, idx: number) => (
+              <div key={idx} className="col-md-4 mt-3">
+
+                <button
+                  className="btn btn-outline-success w-100"
+                  disabled={loadingDownload}
+                  onClick={() => handleDownload(item.format, item.quality)}
+                >
+                  {item.type === "video" ? "📹" : "🎵"}  
+                  {item.format.toUpperCase()} — {item.quality}
+                  {item.size ? ` (${item.size})` : ""}
+                </button>
+
+              </div>
+            ))}
+          </div>
+
+          {loadingDownload && (
+            <p className="text-center mt-3 text-primary">
+              Preparando descarga...
+            </p>
+          )}
         </div>
       )}
     </div>
   );
-};
+}
 
 export default VideoDownloader;
