@@ -1,0 +1,21 @@
+/*
+  FormatList.css
+  -------------------------------------------
+  Lista visual de formatos con diseño tipo grid.
+*/
+
+.format-list {
+  margin-top: 1.5rem;
+}
+
+.format-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+
+.format-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.8rem;
+}
