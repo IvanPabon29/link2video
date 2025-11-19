@@ -1,0 +1,46 @@
+/*
+  VideoInfoCard.css
+  -------------------------------------------
+  Tarjeta de vista previa del video con diseño limpio
+  y responsivo.
+*/
+
+.video-info-card {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+  background: var(--color-bg);
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+  margin-top: 1rem;
+}
+
+.video-info-thumb {
+  width: 140px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.video-info-details {
+  flex: 1;
+}
+
+.video-info-title {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 0.3rem;
+}
+
+.video-info-author {
+  opacity: 0.75;
+  margin-bottom: 0.3rem;
+}
+
+.video-info-duration {
+  font-size: 0.9rem;
+  background: var(--color-accent);
+  color: var(--color-text-light);
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+}
