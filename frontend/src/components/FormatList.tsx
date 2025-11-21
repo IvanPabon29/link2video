@@ -9,20 +9,12 @@
 */
 
 import FormatButton from "./FormatButton";
+import type { VideoFormat } from "../types/VideoFormat";
 import "./styles/FormatList.css";
 
-interface Format {
-  format?: string;
-  extension?: string;
-  quality: string;      
-  type: "audio" | "video";
-  height?: number;       // Para ordenar video
-  bitrate?: number;      // Para ordenar audio
-}
-
 interface Props {
-  formats: Format[];
-  onSelect: (format: Format) => void;
+  formats: VideoFormat[];
+  onSelect: (format: VideoFormat) => void;
 }
 
 const FormatList = ({ formats, onSelect }: Props) => {
@@ -41,7 +33,7 @@ const FormatList = ({ formats, onSelect }: Props) => {
   */
   const formatOrder = ["mp4", "webm", "mp3", "m4a", "ogg", "wav"];
 
-  const sortByExtension = (a: Format, b: Format) => {
+  const sortByExtension = (a: VideoFormat, b: VideoFormat) => {
     const extA = (a.extension || a.format || "").toLowerCase();
     const extB = (b.extension || b.format || "").toLowerCase();
 
@@ -56,7 +48,7 @@ const FormatList = ({ formats, onSelect }: Props) => {
        - VIDEO → por resolución (altura)
        - AUDIO → por bitrate
   */
-  const sortInternal = (a: Format, b: Format) => {
+  const sortInternal = (a: VideoFormat, b: VideoFormat) => {
     // VIDEO → mayor resolución arriba
     if (a.type === "video" && b.type === "video") {
       return (b.height || 0) - (a.height || 0);
@@ -86,7 +78,7 @@ const FormatList = ({ formats, onSelect }: Props) => {
   /*
     6. EVITAR CRASH: siempre usar string seguro en labels
   */
-  const getLabelSafe = (f: Format) =>
+  const getLabelSafe = (f: VideoFormat) =>
     `${(f.extension || f.format || "??").toString().toUpperCase()} • ${f.quality}`;
 
   return (
