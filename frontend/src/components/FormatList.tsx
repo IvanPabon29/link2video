@@ -1,17 +1,23 @@
 /*
   FormatList.tsx
   -------------------------------------------
-  Lista de formatos disponibles. Renderiza un
-  FormatButton por cada formato de la API.
+  Lista de formatos disponibles agrupados y ordenados.
+  - Filtra formatos no válidos
+  - Ordena primero por extensión (mp4, webm, mp3...)
+  - Luego ordena por resolución o bitrate
+  - Renderiza secciones separadas: Video / Audio
 */
 
 import FormatButton from "./FormatButton";
 import "./styles/FormatList.css";
 
 interface Format {
-    format: string;   // "mp4" | mp3 | webm | wav...
-    quality: string; // ej: 720p | 1080p | 2K | 4K...
-
+  format?: string;
+  extension?: string;
+  quality: string;      
+  type: "audio" | "video";
+  height?: number;       // Para ordenar video
+  bitrate?: number;      // Para ordenar audio
 }
 
 interface Props {
@@ -20,19 +26,104 @@ interface Props {
 }
 
 const FormatList = ({ formats, onSelect }: Props) => {
+
+  /*
+    1. LIMPIAR FORMATS — eliminar formatos inválidos
+  */
+  const cleanFormats = formats.filter(f => {
+    const ext = (f.extension || f.format || "").toLowerCase();
+    return ext !== "mhtml" && ext.trim() !== "";
+  });
+
+  /*
+    2. ORDEN POR TIPO DE FORMATO (extensión)
+       Orden deseado: mp4, webm, mp3, m4a, ogg, wav
+  */
+  const formatOrder = ["mp4", "webm", "mp3", "m4a", "ogg", "wav"];
+
+  const sortByExtension = (a: Format, b: Format) => {
+    const extA = (a.extension || a.format || "").toLowerCase();
+    const extB = (b.extension || b.format || "").toLowerCase();
+
+    const posA = formatOrder.indexOf(extA);
+    const posB = formatOrder.indexOf(extB);
+
+    return posA - posB;
+  };
+
+  /*
+    3. ORDEN INTERNO
+       - VIDEO → por resolución (altura)
+       - AUDIO → por bitrate
+  */
+  const sortInternal = (a: Format, b: Format) => {
+    // VIDEO → mayor resolución arriba
+    if (a.type === "video" && b.type === "video") {
+      return (b.height || 0) - (a.height || 0);
+    }
+
+    // AUDIO → mayor bitrate arriba
+    if (a.type === "audio" && b.type === "audio") {
+      return (b.bitrate || 0) - (a.bitrate || 0);
+    }
+
+    return 0;
+  };
+
+  /*
+    4. APLICAR ORDEN FINAL
+  */
+  const finalFormats = [...cleanFormats]
+    .sort(sortByExtension)
+    .sort(sortInternal);
+
+  /*
+    5. AGRUPAR video y audio
+  */
+  const videoFormats = finalFormats.filter(f => f.type === "video");
+  const audioFormats = finalFormats.filter(f => f.type === "audio");
+
+  /*
+    6. EVITAR CRASH: siempre usar string seguro en labels
+  */
+  const getLabelSafe = (f: Format) =>
+    `${(f.extension || f.format || "??").toString().toUpperCase()} • ${f.quality}`;
+
   return (
     <div className="format-list">
       <h3 className="format-title">Selecciona un formato:</h3>
 
-      <div className="format-grid">
-        {formats.map((f, index) => (
-          <FormatButton
-            key={index}
-            label={`${f.format.toUpperCase()} • ${f.quality}`}
-            onClick={() => onSelect(f)}
-          />
-        ))}
-      </div>
+      {/* SECCIÓN VIDEO */}
+      {videoFormats.length > 0 && (
+        <>
+          <h4 className="format-subtitle">Video</h4>
+          <div className="format-grid">
+            {videoFormats.map((f, index) => (
+              <FormatButton
+                key={index}
+                label={getLabelSafe(f)}
+                onClick={() => onSelect(f)}
+              />
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* SECCIÓN AUDIO */}
+      {audioFormats.length > 0 && (
+        <>
+          <h4 className="format-subtitle">Audio</h4>
+          <div className="format-grid">
+            {audioFormats.map((f, index) => (
+              <FormatButton
+                key={index}
+                label={getLabelSafe(f)}
+                onClick={() => onSelect(f)}
+              />
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 };
