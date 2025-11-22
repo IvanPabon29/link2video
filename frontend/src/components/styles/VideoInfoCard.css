@@ -37,6 +37,11 @@
   margin-bottom: 0.3rem;
 }
 
+.video-info-author{
+  display: block;
+  font-size: 0.9rem;
+}
+
 .video-info-duration {
   font-size: 0.9rem;
   background: var(--color-accent);
