@@ -18,13 +18,9 @@ import { videoService } from "../services/videoService";
 
 import VideoInfoCard from "./VideoInfoCard";
 import FormatList from "./FormatList";
-
+import type { VideoFormat } from "../types/VideoFormat";
 import "./styles/VideoDownloader.css";
 
-interface VideoFormat {
-  format: string;       // mp4 | mp3 | webm | wav...
-  quality: string;     // 720p | 1080p | 2K | 4K...
-}
 
 const VideoDownloader = () => {
   // URL ingresada por el usuario
@@ -34,6 +30,7 @@ const VideoDownloader = () => {
   const [videoInfo, setVideoInfo] = useState<{
     title: string;
     thumbnail: string;
+    uploader?: string;
     duration: string;
     formats: VideoFormat[];
   } | null>(null);
@@ -75,8 +72,8 @@ const VideoDownloader = () => {
 
       const response = await videoService.downloadVideo({
         url: videoUrl,
-        format: format.format,
-        quality: format.quality,
+        format: format.ext || format.format || "",
+        quality: format.quality || "",
       });
 
       // Descargar el archivo
@@ -119,6 +116,7 @@ const VideoDownloader = () => {
           <VideoInfoCard
             thumbnail={videoInfo.thumbnail}
             title={videoInfo.title}
+            uploader={videoInfo.uploader ?? ""}
             duration={videoInfo.duration}
           />
 
