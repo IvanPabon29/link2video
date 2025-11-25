@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 # Importaciones locales
 from app.core.config import settings
 from app.database.connection import connect_to_mongo, close_mongo_connection
-from app.routers import video_router, jobs_router
+from app.routers import video_info_router, video_download_router 
 
 #  Inicialización de la app
 app = FastAPI(
@@ -43,8 +43,9 @@ async def shutdown_db():
     await close_mongo_connection()
 
 #  Registro de routers
-app.include_router(video_router.router, prefix="/api/video", tags=["Video"])
-app.include_router(jobs_router.router, prefix="/api/jobs", tags=["Jobs"])
+app.include_router(video_info_router.router, prefix="/api/video", tags=["Video"])
+app.include_router(video_download_router.router, prefix="/api/video", tags=["Video"])
+# app.include_router(jobs_router.router, prefix="/api/jobs", tags=["Jobs"])
 
 #  Endpoint raíz
 @app.get("/", tags=["Root"])
