@@ -20,9 +20,8 @@ router = APIRouter()
 
 class DownloadRequest(BaseModel):
     url: HttpUrl
-    format: Optional[str] = Field("mp4")
-    quality: Optional[str] = Field("720p")
-
+    format: Optional[str] = Field("mp4", description="Formato de salida (mp4, mp3, webm, m4a, etc.)")
+    quality: Optional[str] = Field("1080p", description="Calidad deseada (720p, 1080p, 4k, etc.)")
 
 @router.post("/download")
 async def download(req: DownloadRequest):
