@@ -1,20 +1,27 @@
 """
 app/services/download_service.py
 -------------------------------------------
-Descarga y (si aplica) convierte el video/audio usando yt-dlp + ffmpeg.
+Servicio encargado de descargar y (si aplica) convertir
+videos o audios desde plataformas soportadas por yt-dlp.
 
-Funciones exportadas:
-- download_and_convert(url: str, format: str, quality: str) -> dict
+Principales funciones:
+- download_and_convert(url, format, quality): descarga el contenido
+  respetando formato y calidad solicitados, combinando video+audio
+  cuando es necesario y utilizando FFmpeg para conversiones finales.
 
 Retorna:
-{ "filename": "video.mp4", "download_url": "/downloads/video.mp4", "message": "..." }
+{
+    "filename": "archivo_final.mp4",
+    "download_url": "/downloads/archivo_final.mp4",
+    "message": "Descarga lista"
+}
 """
 
 import os
 import asyncio
 import datetime
 import yt_dlp
-from typing import Dict
+from typing import Dict, Optional
 from fastapi import HTTPException
 from app.database.connection import db  
 from app.models.video_model import VideoModel
@@ -24,163 +31,211 @@ DOWNLOAD_DIR = os.path.join(os.getcwd(), "downloads")
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 
-# Util: busca el mejor format_id según extensión/quality enviada
-def _choose_format_id(info: dict, desired_ext: str, desired_quality: str) -> str | None:
+def _choose_format(info: dict, desired_ext: str, desired_quality: str, audio_only: bool) -> Optional[str]:
     """
-    Busca en info['formats'] el format_id más cercano a desired_ext+desired_quality.
-    Si no encuentra coincidencia exacta, devuelve None (yt-dlp seleccionará 'best').
+    Selecciona el format_id más cercano a la petición.
+    - Si audio_only=True intenta priorizar tracks de audio (bestaudio).
+    - Devuelve un format selector aceptado por yt-dlp (ej. "137+140" o "bestvideo+bestaudio/best" o format_id).
     """
     desired_ext = (desired_ext or "").lower()
     desired_quality = (desired_quality or "").lower()
 
-    candidates = []
-    for f in info.get("formats", []):
-        ext = (f.get("ext") or "").lower()
-        height = f.get("height")
-        tbr = f.get("tbr")
-        # text match quality: '720p' vs height
-        qlabel = f"{height}p" if height else (f"{int(tbr)}kbps" if tbr else "")
-        score = 0
-        if ext == desired_ext:
-            score += 2
-        if desired_quality and qlabel and desired_quality in qlabel.lower():
-            score += 3
-        # prefer higher height/tbr
-        score += (height or 0) + int(tbr or 0)
-        candidates.append((score, f.get("format_id")))
-    if not candidates:
+    # Si es audio-only devolvemos None -> usar 'bestaudio/best' (yt-dlp)
+    if audio_only:
         return None
+
+    candidates = []
+    for f in info.get("formats", []) or []:
+        ext = (f.get("ext") or "").lower()
+        height = f.get("height") or 0
+        vcodec = f.get("vcodec") or ""
+        acodec = f.get("acodec") or ""
+        has_video = vcodec != "none" and vcodec != ""
+        has_audio = acodec != "none" and acodec != ""
+
+        # preferir formatos que contengan audio+video (para evitar archivos solo video sin audio)
+        if not (has_video and has_audio):
+            continue
+
+        score = 0
+        if ext == desired_ext and desired_ext != "":
+            score += 50
+        # calidad por altura
+        if desired_quality and str(desired_quality) in f"{height}p":
+            score += 30
+        # preferir mayor altura
+        score += height
+        candidates.append((score, f.get("format_id")))
+
+    if not candidates:
+        # fallback: devolver None -> usar bestvideo+bestaudio later
+        return None
+
     candidates.sort(key=lambda x: -x[0])
     return candidates[0][1]
 
 
 async def download_and_convert(url: str, format: str = "mp4", quality: str = "720p") -> Dict:
     """
-    Realiza la descarga y conversión si es necesario.
-
-    - url: string (asegúrate de castearlo desde HttpUrl)
-    - format: extensión solicitada (mp4, webm, mp3, m4a, opus...)
-    - quality: text label (720p, 1080p, 128kbps ...)
-
-    Retorna un diccionario con filename y download_url.
+    Descarga y convierte (si aplica) un recurso multimedia.
+    - url: enlace
+    - format: extensión final solicitada (mp4, webm, mp3, m4a, opus, wav, etc.)
+    - quality: etiqueta (720p, 1080p, 128kbps...)
     """
     url = str(url)
-    format = str(format)
-    quality = str(quality)
+    format = str(format or "mp4")
+    quality = str(quality or "")
 
-    # 1) Extraccion de metadata (síncrono) pero en thread
+    # Extraer metadata con yt-dlp en thread
     def _extract():
-        opts = {"quiet": True, "no_warnings": True}
-        with yt_dlp.YoutubeDL(opts) as ydl:
+        ydl_opts = {"quiet": True, "no_warnings": True, "skip_download": True}
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             return ydl.extract_info(url, download=False)
 
     info = await asyncio.to_thread(_extract)
-    title = info.get("title", "video").replace("/", "_")
-    ext_orig = info.get("ext", "mp4")
+    title_raw = info.get("title") or "video"
+    title = title_raw.replace("/", "_").strip() or "video"
 
-    # 2) determine format id if possible
-    chosen_format_id = _choose_format_id(info, format, quality)
+    # decidir si es audio-only (extensiones típicas)
+    audio_exts = {"mp3", "m4a", "opus", "aac", "wav", "ogg"}
+    audio_only = format.lower() in audio_exts
 
-    # 3) build yt-dlp options
+    # escoger format_id o fallback
+    selected = _choose_format(info, format, quality, audio_only=audio_only)
+
     outtmpl = os.path.join(DOWNLOAD_DIR, f"{title}.%(ext)s")
+
+    # Preparar opciones para yt-dlp
     ydl_opts = {
-        "format": chosen_format_id or "best",
         "outtmpl": outtmpl,
         "quiet": True,
         "no_warnings": True,
-        "merge_output_format": ext_orig,  # yt-dlp merges if video+audio
     }
 
-    # If target is audio-only (mp3/m4a/opus) we can ask yt-dlp to extract audio directly
-    audio_only = format.lower() in ("mp3", "m4a", "opus", "wav", "aac")
-
+    # Si pedimos audio-only, mejor usar 'bestaudio/best' y postprocessor de yt-dlp
     if audio_only:
-        # prefer bestaudio
-        ydl_opts["format"] = chosen_format_id or "bestaudio/best"
-        # set postprocessor to extract audio? We'll use ffmpeg conversion path for clarity
-    # Execute download in thread (blocking)
+        ydl_opts["format"] = selected or "bestaudio/best"
+        # Postprocessor para extraer audio en formato deseado (usa ffmpeg internamente)
+        # preferredquality puede ser ignorado para codecs como 'm4a' pero se deja por compatibilidad
+        ydl_opts["postprocessors"] = [{
+            "key": "FFmpegExtractAudio",
+            "preferredcodec": format.lower(),
+            "preferredquality": "192"
+        }]
+        # Ajustar outtmpl para que yt-dlp genere <title>.<ext> por extracción
+        # yt-dlp, tras postprocessor, generará el archivo final con la extensión deseada
+    else:
+        # video+audio: si selected es None -> usaremos bestvideo+bestaudio/best
+        ydl_opts["format"] = selected or "bestvideo+bestaudio/best"
+        # Solicitar mezcla a formato final (si yt-dlp puede)
+        ydl_opts["merge_output_format"] = format.lower()
+
+    # Ejecutar descarga en thread (bloqueante dentro del thread)
     def _download():
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([url])
-        # find generated file (yt-dlp may create <title>.<ext>)
-        # choose the largest matching file with base title
+
+        # Buscar archivos generados que empiecen con title
         files = [f for f in os.listdir(DOWNLOAD_DIR) if f.startswith(title + ".")]
         if not files:
-            raise FileNotFoundError("No se creó archivo tras descarga")
-        # pick the file with largest size
+            raise FileNotFoundError("No se generó ningún archivo tras la descarga.")
+
+        # retornar el archivo más pesado (probablemente el final)
         files_with_size = [(f, os.path.getsize(os.path.join(DOWNLOAD_DIR, f))) for f in files]
         files_with_size.sort(key=lambda x: -x[1])
-        return files_with_size[0][0]  # filename
+        return files_with_size[0][0]
 
     try:
         created_filename = await asyncio.to_thread(_download)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"yt-dlp error: {e}")
+        # incluir mensaje para debug
+        raise HTTPException(status_code=500, detail=f"Error en descarga (yt-dlp): {e}")
 
-    filepath = os.path.join(DOWNLOAD_DIR, created_filename)
+    created_path = os.path.join(DOWNLOAD_DIR, created_filename)
 
-    # If requested extension equals created ext -> done
+    # Si el archivo ya tiene la extensión solicitada, lo usamos
     if created_filename.lower().endswith("." + format.lower()):
         final_filename = created_filename
+        final_path = created_path
     else:
-        # Convert with ffmpeg (async)
+        # Intentamos convertir/copy streams con ffmpeg si es posible (copy streams evita re-encode)
         base = os.path.splitext(created_filename)[0]
-        final_filename = f"{base}.{format}"
+        final_filename = f"{base}.{format.lower()}"
         final_path = os.path.join(DOWNLOAD_DIR, final_filename)
 
-        # Build ffmpeg command
-        # If audio-only requested, remove video stream (-vn) and encode audio
+        # Si pedimos audio-only y yt-dlp no creó el formato deseado, hacer extracción con ffmpeg
         if audio_only:
             cmd = [
-                "ffmpeg",
-                "-y",
-                "-i", filepath,
+                "ffmpeg", "-y",
+                "-i", created_path,
                 "-vn",
-                "-c:a", "libmp3lame" if format == "mp3" else "aac",
+                "-c:a", "copy",  # intentar copiar si ya tiene codec compatible
                 final_path
             ]
         else:
-            # video conversion (re-encode with libx264 + aac)
+            # video: intentar copiar streams (más rápido) y fallar a re-encode en caso necesario
             cmd = [
-                "ffmpeg",
-                "-y",
-                "-i", filepath,
-                "-c:v", "libx264",
-                "-preset", "fast",
-                "-c:a", "aac",
+                "ffmpeg", "-y",
+                "-i", created_path,
+                "-c:v", "copy",
+                "-c:a", "copy",
                 final_path
             ]
 
         process = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
-        stdout, stderr = await process.communicate()
+        _, stderr = await process.communicate()
         if process.returncode != 0:
-            # keep original file if conversion fails
-            raise HTTPException(status_code=500, detail=f"FFmpeg failed: {stderr.decode()}")
-        # optionally delete original file to save space
+            # si copy falla (codecs incompatibles), intentar re-encode (video -> libx264, audio -> aac/mp3)
+            if not audio_only:
+                # re-encode video+audio
+                cmd2 = [
+                    "ffmpeg", "-y",
+                    "-i", created_path,
+                    "-c:v", "libx264",
+                    "-preset", "fast",
+                    "-c:a", "aac",
+                    final_path
+                ]
+            else:
+                # re-encode audio
+                codec = "libmp3lame" if format.lower() == "mp3" else "aac"
+                cmd2 = [
+                    "ffmpeg", "-y",
+                    "-i", created_path,
+                    "-vn",
+                    "-c:a", codec,
+                    final_path
+                ]
+            proc2 = await asyncio.create_subprocess_exec(*cmd2, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+            _, stderr2 = await proc2.communicate()
+            if proc2.returncode != 0:
+                # devolver error con detalle de ffmpeg
+                raise HTTPException(status_code=500, detail=f"FFmpeg error: {stderr2.decode()}")
+        # eliminar el archivo original para ahorrar espacio
         try:
-            if os.path.exists(filepath):
-                os.remove(filepath)
+            if os.path.exists(created_path):
+                os.remove(created_path)
         except Exception:
             pass
 
-    # Save metadata to DB (optional)
+    # Guardar en DB (opcional, silencioso)
     try:
-        video_doc = VideoModel(
+        vm = VideoModel(
             title=title,
             filename=final_filename,
-            format=format,
+            format=format.lower(),
             quality=quality,
             platform=info.get("extractor_key", "unknown"),
             download_url=f"/downloads/{final_filename}",
             created_at=datetime.datetime.utcnow(),
         )
-        await db["videos"].insert_one(video_doc.model_dump(by_alias=True))
+        await db["videos"].insert_one(vm.model_dump(by_alias=True))
     except Exception:
-        # non-fatal: log/ignore (no logging here to keep dependency-free)
+        # no crítico: ignorar
         pass
 
     return {
         "filename": final_filename,
         "download_url": f"/downloads/{final_filename}",
-        "message": "Download ready"
+        "message": "Descarga lista"
     }
