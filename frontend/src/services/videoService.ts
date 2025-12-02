@@ -6,6 +6,7 @@
 */
 
 import apiClient from "./apiConfig";
+import type { VideoFormat } from "../types/VideoFormat";
 
 //  1. Tipos de datos y payloads
 
@@ -13,15 +14,9 @@ export interface VideoInfoResponse {
   title: string;
   thumbnail: string;
   duration: string;
-
-  formats: Array<{
-    format: string;      // mp4, webm, mp3, wav, etc
-    quality: string;     // 720p, 1080p, 1440p, 4k, 128kbps, etc
-    size?: string;       // "40 MB"
-    codec?: string;
-    fps?: number;
-    type: "audio" | "video";
-  }>;
+  uploader: string;
+  platform: string;
+  formats: VideoFormat[];
 }
 
 export interface DownloadPayload {
