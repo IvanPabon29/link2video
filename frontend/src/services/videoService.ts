@@ -25,14 +25,8 @@ export interface DownloadPayload {
   quality: string;
 }
 
-export interface DownloadResponse {
-  download_url: string;
-  filename: string;
-}
 
-
-//  2. Servicio principal 
-
+// 2. Servicio de video
 export const videoService = {
 
   /**
@@ -47,14 +41,17 @@ export const videoService = {
   },
 
   /**
-   * 2. Descargar el formato/calidad elegida
+   * 2. Descargar el formato/calidad elegida como BLOB (Archivo binario)
    */
-  async downloadVideo(payload: DownloadPayload): Promise<DownloadResponse> {
-    const response = await apiClient.post<DownloadResponse>(
+  async downloadVideo(payload: DownloadPayload): Promise<Blob> {
+    const response = await apiClient.post(
       "/video/download",
-      payload
+      payload,
+      {
+        responseType: 'blob', // IMPORTANTE: Esto evita que Axios corrompa el archivo
+      }
     );
-    return response.data;
+    return response.data; // Retorna el objeto Blob
   }
   
 };
