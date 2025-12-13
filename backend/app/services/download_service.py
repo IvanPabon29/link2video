@@ -25,20 +25,6 @@ from app.models.video_model import VideoModel
 DOWNLOAD_DIR = os.path.join(os.getcwd(), "downloads")
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
-import os
-import asyncio
-import datetime
-import yt_dlp
-import shutil
-import re
-from typing import Dict
-from fastapi import HTTPException
-from app.database.connection import db  
-from app.models.video_model import VideoModel
-
-DOWNLOAD_DIR = os.path.join(os.getcwd(), "downloads")
-os.makedirs(DOWNLOAD_DIR, exist_ok=True)
-
 def _safe_title(title: str) -> str:
     # Limpieza básica del título
     title = re.sub(r'[\\/:"*?<>|]+', "_", title)
@@ -62,60 +48,59 @@ async def download_and_convert(url: str, format_ext: str = "mp4", quality: str =
         else:
             raise HTTPException(status_code=500, detail="FFmpeg no encontrado.")
 
-    # Generar ID temporal único
+    # Generar ID
     timestamp = int(datetime.datetime.utcnow().timestamp())
     filename_base = f"temp_{timestamp}" 
-    # Usamos %(ext)s porque no sabemos qué bajará primero yt-dlp
     outtmpl = os.path.join(DOWNLOAD_DIR, f"{filename_base}.%(ext)s")
 
     audio_only = format_ext in ["mp3", "m4a", "wav", "opus"]
     height = _parse_height(quality)
 
-    # === CONFIGURACIÓN BASE ===
+    # Opciones Base
     ydl_opts = {
         "outtmpl": outtmpl,
         "ffmpeg_location": ffmpeg_path,
-        "quiet": True, 
+        "quiet": True,
         "no_warnings": True,
         "noplaylist": True,
         "overwrites": True,
     }
 
     if audio_only:
-        # === SOLUCIÓN AUDIO (M4A/MP3) ===
-        # Forzamos "bestaudio" para que NO baje fragmentos de video.
+        # SOLUCIÓN AUDIO ESTRICTA (MP3/M4A)
+        # Formato: Solo el mejor audio.
         ydl_opts.update({
-            "format": "bestaudio/best", 
+            "format": "bestaudio/best",
+            # Postprocesador para extraer y CONVERTIR al formato deseado (ej: mp3)
             "postprocessors": [{
                 "key": "FFmpegExtractAudio",
-                "preferredcodec": format_ext, # mp3, m4a
+                "preferredcodec": format_ext, # mp3, m4a, wav
                 "preferredquality": "192",
+                # OJO: Quitamos postprocessor_args, porque yt-dlp debe manejarlo con 'FFmpegExtractAudio'
             }],
+            # Clave 1: Forzar que el archivo de salida final tenga la extensión correcta
+            "post_process_ext": format_ext 
         })
     else:
-        # === SOLUCIÓN VIDEO (MP4) ===
-        # El problema del audio mudo es codec Opus en MP4.
-        # ESTRATEGIA: 
-        # 1. Bajar Video+Audio en su formato nativo (suele ser webm o mkv).
-        # 2. Usar FFmpegVideoConvertor para pasarlo a MP4 estandar (H264 + AAC).
-        
+        # === ESTRATEGIA VIDEO (La que ya funciona rápido) ===
         if height > 0:
-            ydl_format = f"bestvideo[height<={height}]+bestaudio/best[height<={height}]/best"
+            ydl_format = (f"bestvideo[height<={height}][ext=mp4]+bestaudio[ext=m4a]/" 
+                          f"bestvideo[height<={height}]+bestaudio/best[height<={height}]/best") 
         else:
-            ydl_format = "bestvideo+bestaudio/best"
+            ydl_format = "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best"
 
         ydl_opts.update({
             "format": ydl_format,
-            # Paso 1: Que lo una en MKV (que acepta cualquier codec sin fallar)
-            "merge_output_format": "mkv", 
+            "merge_output_format": format_ext, 
             "postprocessors": [{
-                # Paso 2: Convertir ese MKV a MP4 real compatible con Windows
                 "key": "FFmpegVideoConvertor",
-                "preferedformat": "mp4",
+                "preferedformat": format_ext,
             }],
+            "postprocessor_args": [
+                "-preset", "ultrafast" 
+            ]
         })
 
-    # Ejecución
     def _run_yt_dlp():
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
@@ -129,12 +114,10 @@ async def download_and_convert(url: str, format_ext: str = "mp4", quality: str =
 
     # === BÚSQUEDA DEL ARCHIVO FINAL ===
     # El archivo final tendrá el nombre base + la extensión solicitada
-    # (porque el postprocesador ya lo convirtió)
     expected_file = f"{filename_base}.{format_ext}"
     final_path_temp = os.path.join(DOWNLOAD_DIR, expected_file)
 
-    # Si no está, es posible que FFmpegVideoConvertor no haya cambiado la extensión 
-    # o haya ocurrido algo raro. Buscamos fallback seguro por nombre base.
+    # Búsqueda de seguridad por si FFmpeg cambió algo levemente
     if not os.path.exists(final_path_temp):
         found = False
         for f in os.listdir(DOWNLOAD_DIR):
@@ -143,8 +126,6 @@ async def download_and_convert(url: str, format_ext: str = "mp4", quality: str =
                 found = True
                 break
         if not found:
-             # Debug: listar carpeta
-            print(f"ARCHIVOS EN DIR: {os.listdir(DOWNLOAD_DIR)}")
             raise HTTPException(status_code=500, detail="Error: El archivo no se generó correctamente.")
 
     # Renombrar y Mover
@@ -156,7 +137,7 @@ async def download_and_convert(url: str, format_ext: str = "mp4", quality: str =
         os.remove(clean_path)
     shutil.move(final_path_temp, clean_path)
 
-    # Limpieza de archivos temporales sobrantes (importante si M4A bajó video extra)
+    # Limpieza de basura (archivos originales descargados antes del merge)
     for f in os.listdir(DOWNLOAD_DIR):
         if f.startswith(filename_base):
             try:
