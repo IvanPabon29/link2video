@@ -2,9 +2,9 @@
   FormatList.tsx
   -------------------------------------------
   Lista de formatos disponibles agrupados y ordenados.
-  - Filtra formatos no válidos
-  - Ordena primero por extensión (mp4, webm, mp3...)
-  - Luego ordena por resolución o bitrate
+  - Filtra para dejar SOLO MP4, MP3 y M4A.
+  - Ordena primero por extensión.
+  - Luego ordena por resolución o bitrate.
   - Renderiza secciones separadas: Video / Audio
 */
 
@@ -20,18 +20,22 @@ interface Props {
 const FormatList = ({ formats, onSelect }: Props) => {
 
   /*
-    1. LIMPIAR FORMATS — eliminar formatos inválidos
+    1. LIMPIAR FORMATS — eliminar formatos inválidos y no deseados
+       SOLO PERMITIMOS: MP4, MP3 y M4A
   */
   const cleanFormats = formats.filter(f => {
     const ext = (f.extension || f.format || "").toLowerCase();
-    return ext !== "mhtml" && ext.trim() !== "";
+    // Lista blanca de formatos permitidos
+    const allowedFormats = ["mp4", "mp3", "m4a"];
+    
+    return allowedFormats.includes(ext) && ext.trim() !== "";
   });
 
   /*
     2. ORDEN POR TIPO DE FORMATO (extensión)
-       Orden deseado: mp4, webm, mp3, m4a, ogg, wav
+       Orden deseado: mp4, mp3, m4a
   */
-  const formatOrder = ["mp4", "webm", "mp3", "m4a", "ogg", "wav"];
+  const formatOrder = ["mp4", "mp3", "m4a"];
 
   const sortByExtension = (a: VideoFormat, b: VideoFormat) => {
     const extA = (a.extension || a.format || "").toLowerCase();
@@ -40,7 +44,8 @@ const FormatList = ({ formats, onSelect }: Props) => {
     const posA = formatOrder.indexOf(extA);
     const posB = formatOrder.indexOf(extB);
 
-    return posA - posB;
+    // Si no está en la lista (pos = -1), lo mandamos al final
+    return (posA === -1 ? 999 : posA) - (posB === -1 ? 999 : posB);
   };
 
   /*
@@ -88,7 +93,7 @@ const FormatList = ({ formats, onSelect }: Props) => {
       {/* SECCIÓN VIDEO */}
       {videoFormats.length > 0 && (
         <>
-          <h4 className="format-subtitle">Video</h4>
+          <h4 className="format-subtitle">Video (MP4)</h4>
           <div className="format-grid">
             {videoFormats.map((f, index) => (
               <FormatButton
