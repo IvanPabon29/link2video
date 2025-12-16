@@ -64,6 +64,15 @@ const VideoDownloader = () => {
   };
 
   /**
+   * Maneja la tecla ENTER en el input
+   */
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      handleFetchInfo();
+    }
+  };
+
+  /**
    * Solicita la descarga con el formato seleccionado
    */
   const handleDownload = async (format: VideoFormat) => {
@@ -105,6 +114,7 @@ const VideoDownloader = () => {
       setLoading(false);
     }
   };
+
   return (
     <div className="video-downloader-container">
       <h2 className="video-title">Descargar Video / Audio</h2>
@@ -116,6 +126,7 @@ const VideoDownloader = () => {
         placeholder="Ingresa el enlace del video Ej: Youtube, Tik Tok, Instagram..."
         value={videoUrl}
         onChange={(e) => setVideoUrl(e.target.value)}
+        onKeyDown={handleKeyDown} 
       />
 
       <button className="video-btn" onClick={handleFetchInfo}>
