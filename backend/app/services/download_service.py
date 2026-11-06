@@ -56,7 +56,7 @@ async def download_and_convert(url: str, format_ext: str = "mp4", quality: str =
     audio_only = format_ext in ["mp3", "m4a", "wav", "opus"]
     height = _parse_height(quality)
 
-    # Opciones Base
+    # Opciones Base con límite de tiempo para evitar congelamientos (timeouts)
     ydl_opts = {
         "outtmpl": outtmpl,
         "ffmpeg_location": ffmpeg_path,
@@ -64,41 +64,32 @@ async def download_and_convert(url: str, format_ext: str = "mp4", quality: str =
         "no_warnings": True,
         "noplaylist": True,
         "overwrites": True,
+        "socket_timeout": 30,  # Evita que se quede colgado indefinidamente
     }
 
     if audio_only:
         # SOLUCIÓN AUDIO ESTRICTA (MP3/M4A)
-        # Formato: Solo el mejor audio.
+        # Formato: Solo el mejor audio disponible.
         ydl_opts.update({
             "format": "bestaudio/best",
-            # Postprocesador para extraer y CONVERTIR al formato deseado (ej: mp3)
             "postprocessors": [{
                 "key": "FFmpegExtractAudio",
-                "preferredcodec": format_ext, # mp3, m4a, wav
+                "preferredcodec": format_ext,  # mp3, m4a, wav
                 "preferredquality": "192",
-                # OJO: Quitamos postprocessor_args, porque yt-dlp debe manejarlo con 'FFmpegExtractAudio'
             }],
-            # Clave 1: Forzar que el archivo de salida final tenga la extensión correcta
             "post_process_ext": format_ext 
         })
     else:
-        # === ESTRATEGIA VIDEO (La que ya funciona rápido) ===
+        # === ESTRATEGIA VIDEO CON AUDIO OPTIMIZADA ===
+        # Selecciona el mejor video hasta la altura deseada y lo combina con el mejor audio
         if height > 0:
-            ydl_format = (f"bestvideo[height<={height}][ext=mp4]+bestaudio[ext=m4a]/" 
-                          f"bestvideo[height<={height}]+bestaudio/best[height<={height}]/best") 
+            ydl_format = f"bestvideo[height<={height}]+bestaudio/best[height<={height}]/best"
         else:
-            ydl_format = "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best"
+            ydl_format = "bestvideo+bestaudio/best"
 
         ydl_opts.update({
             "format": ydl_format,
-            "merge_output_format": format_ext, 
-            "postprocessors": [{
-                "key": "FFmpegVideoConvertor",
-                "preferedformat": format_ext,
-            }],
-            "postprocessor_args": [
-                "-preset", "ultrafast" 
-            ]
+            "merge_output_format": format_ext,  # Fusión nativa y limpia mediante FFmpeg sin recodificaciones forzadas
         })
 
     def _run_yt_dlp():
@@ -113,11 +104,10 @@ async def download_and_convert(url: str, format_ext: str = "mp4", quality: str =
         raise HTTPException(status_code=500, detail=f"Error descarga: {str(e)}")
 
     # === BÚSQUEDA DEL ARCHIVO FINAL ===
-    # El archivo final tendrá el nombre base + la extensión solicitada
     expected_file = f"{filename_base}.{format_ext}"
     final_path_temp = os.path.join(DOWNLOAD_DIR, expected_file)
 
-    # Búsqueda de seguridad por si FFmpeg cambió algo levemente
+    # Búsqueda de seguridad por si FFmpeg cambió la extensión o ajustó el contenedor
     if not os.path.exists(final_path_temp):
         found = False
         for f in os.listdir(DOWNLOAD_DIR):
@@ -128,7 +118,7 @@ async def download_and_convert(url: str, format_ext: str = "mp4", quality: str =
         if not found:
             raise HTTPException(status_code=500, detail="Error: El archivo no se generó correctamente.")
 
-    # Renombrar y Mover
+    # Renombrar y Mover al nombre final limpio con el título del video
     title = _safe_title(info_dict.get("title", "video"))
     clean_filename = f"{title}.{format_ext}"
     clean_path = os.path.join(DOWNLOAD_DIR, clean_filename)
@@ -137,7 +127,7 @@ async def download_and_convert(url: str, format_ext: str = "mp4", quality: str =
         os.remove(clean_path)
     shutil.move(final_path_temp, clean_path)
 
-    # Limpieza de basura (archivos originales descargados antes del merge)
+    # Limpieza de basura (archivos temporales independientes antes del merge)
     for f in os.listdir(DOWNLOAD_DIR):
         if f.startswith(filename_base):
             try:
@@ -145,7 +135,7 @@ async def download_and_convert(url: str, format_ext: str = "mp4", quality: str =
             except:
                 pass
 
-    # DB
+    # Registro en Base de Datos (Opcional, protegido contra fallos de DB)
     try:
         vm = VideoModel(
             title=title,
