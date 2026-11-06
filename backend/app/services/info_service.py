@@ -89,7 +89,12 @@ async def get_video_info(url: str) -> Dict[str, Any]:
     url = str(url)  # Importante: convertir HttpUrl -> str si es necesario
 
     def _extract():
-        ydl_opts = {"quiet": True, "skip_download": True, "no_warnings": True}
+        ydl_opts = {
+            "quiet": True, 
+            "skip_download": True, 
+            "no_warnings": True,
+            "socket_timeout": 30,  # Evita que se quede colgado indefinidamente
+        }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
         return info
