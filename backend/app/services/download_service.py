@@ -56,7 +56,7 @@ async def download_and_convert(url: str, format_ext: str = "mp4", quality: str =
     audio_only = format_ext in ["mp3", "m4a", "wav", "opus"]
     height = _parse_height(quality)
 
-    # Opciones Base con límite de tiempo para evitar congelamientos (timeouts)
+    # Opciones Base con límite de tiempo para evitar congelamientos
     ydl_opts = {
         "outtmpl": outtmpl,
         "ffmpeg_location": ffmpeg_path,
@@ -64,32 +64,32 @@ async def download_and_convert(url: str, format_ext: str = "mp4", quality: str =
         "no_warnings": True,
         "noplaylist": True,
         "overwrites": True,
-        "socket_timeout": 30,  # Evita que se quede colgado indefinidamente
+        "socket_timeout": 30,
     }
 
     if audio_only:
         # SOLUCIÓN AUDIO ESTRICTA (MP3/M4A)
-        # Formato: Solo el mejor audio disponible.
         ydl_opts.update({
             "format": "bestaudio/best",
             "postprocessors": [{
                 "key": "FFmpegExtractAudio",
-                "preferredcodec": format_ext,  # mp3, m4a, wav
+                "preferredcodec": format_ext,
                 "preferredquality": "192",
             }],
             "post_process_ext": format_ext 
         })
     else:
-        # === ESTRATEGIA VIDEO CON AUDIO OPTIMIZADA ===
-        # Selecciona el mejor video hasta la altura deseada y lo combina con el mejor audio
+        # === ESTRATEGIA VIDEO UNIVERSAL (Compatible con YouTube, Instagram, TikTok, etc.) ===
+        # Intenta primero descargar un archivo combinado (ideal para redes sociales), 
+        # luego busca separado con audio si es necesario (ideal para YouTube).
         if height > 0:
-            ydl_format = f"bestvideo[height<={height}]+bestaudio/best[height<={height}]/best"
+            ydl_format = f"best[height<={height}]/bestvideo[height<={height}]+bestaudio/best"
         else:
-            ydl_format = "bestvideo+bestaudio/best"
+            ydl_format = "best/bestvideo+bestaudio"
 
         ydl_opts.update({
             "format": ydl_format,
-            "merge_output_format": format_ext,  # Fusión nativa y limpia mediante FFmpeg sin recodificaciones forzadas
+            "merge_output_format": format_ext,
         })
 
     def _run_yt_dlp():
@@ -107,7 +107,6 @@ async def download_and_convert(url: str, format_ext: str = "mp4", quality: str =
     expected_file = f"{filename_base}.{format_ext}"
     final_path_temp = os.path.join(DOWNLOAD_DIR, expected_file)
 
-    # Búsqueda de seguridad por si FFmpeg cambió la extensión o ajustó el contenedor
     if not os.path.exists(final_path_temp):
         found = False
         for f in os.listdir(DOWNLOAD_DIR):
@@ -127,7 +126,7 @@ async def download_and_convert(url: str, format_ext: str = "mp4", quality: str =
         os.remove(clean_path)
     shutil.move(final_path_temp, clean_path)
 
-    # Limpieza de basura (archivos temporales independientes antes del merge)
+    # Limpieza de basura (archivos temporales independientes)
     for f in os.listdir(DOWNLOAD_DIR):
         if f.startswith(filename_base):
             try:
