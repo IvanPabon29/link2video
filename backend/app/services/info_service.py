@@ -26,6 +26,8 @@ from typing import Dict, Any, List, Optional
 import asyncio
 import math
 import yt_dlp
+from fastapi import HTTPException
+from app.utils.exceptions import handle_ytdlp_error
 
 
 # Funciones Helper 
@@ -36,7 +38,7 @@ def _bytes_to_human(n: Optional[int]) -> Optional[str]:
     if n == 0:
         return "0 B"
     sizes = ["B", "KB", "MB", "GB", "TB"]
-    i = int(math.floor(math.log(max(n,1), 1024)))
+    i = int(math.floor(math.log(max(n, 1), 1024)))
     p = math.pow(1024, i)
     s = round(n / p, 2)
     return f"{s} {sizes[i]}"
@@ -54,6 +56,7 @@ def _normalize_format(fmt: dict) -> dict:
     vcodec = fmt.get("vcodec")
     acodec = fmt.get("acodec")
     filesize = fmt.get("filesize") or fmt.get("filesize_approx")
+    
     # Determina quality y type 
     if height:
         quality = f"{height}p"
@@ -84,9 +87,9 @@ def _normalize_format(fmt: dict) -> dict:
 async def get_video_info(url: str) -> Dict[str, Any]:
     """
     Extrae la info del video y retorna una estructura lista para el frontend.
-    Ejecuta yt-dlp en un thread con asyncio.to_thread.
+    Ejecuta yt-dlp en un thread con asyncio.to_thread e incluye manejo de errores amigables.
     """
-    url = str(url)  # Importante: convertir HttpUrl -> str si es necesario
+    url = str(url).strip()  # Importante: convertir HttpUrl -> str y limpiar espacios
 
     def _extract():
         ydl_opts = {
@@ -94,12 +97,23 @@ async def get_video_info(url: str) -> Dict[str, Any]:
             "skip_download": True, 
             "no_warnings": True,
             "socket_timeout": 30,  # Evita que se quede colgado indefinidamente
+            "noplaylist": True,    # Evita procesar listas de reproducción completas por error
         }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
         return info
 
-    info = await asyncio.to_thread(_extract)
+    try:
+        info = await asyncio.to_thread(_extract)
+    except Exception as e:
+        raise handle_ytdlp_error(e)
+
+    # Validación de seguridad: verificar que yt-dlp retornó datos válidos
+    if not info:
+        raise HTTPException(
+            status_code=404, 
+            detail="No se encontró información multimedia en el enlace proporcionado."
+        )
 
     # Campos generales
     title = info.get("title", "")
@@ -110,6 +124,14 @@ async def get_video_info(url: str) -> Dict[str, Any]:
 
     # Formatos de mapas: deduplicar por (ext, height, tbr) y ordenar
     raw_formats = info.get("formats", [])
+    
+    # Validación: asegurar que existan flujos descargables (evita enlaces de solo imágenes/texto)
+    if not raw_formats:
+        raise HTTPException(
+            status_code=400, 
+            detail="Este enlace no contiene archivos de video o audio descargables."
+        )
+
     normalized: List[dict] = [_normalize_format(f) for f in raw_formats]
 
     # Mantener formatos únicos por (extension, quality) prefiriendo tamaño/altura mas grande
@@ -121,7 +143,7 @@ async def get_video_info(url: str) -> Dict[str, Any]:
         if not prev:
             seen[key] = f
         else:
-            # Preferiir mayor tamaño o altura
+            # Preferir mayor tamaño o altura
             prev_size = prev.get("size_bytes") or 0
             cur_size = f.get("size_bytes") or 0
             prev_h = prev.get("height") or 0
