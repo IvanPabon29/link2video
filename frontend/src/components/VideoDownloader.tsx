@@ -1,32 +1,21 @@
 /*
-  VideoDownloader.tsx
+  src/components/VideoDownloader.tsx
   --------------------------------------------------------
-  Componente principal del flujo de descarga:
-  1. El usuario ingresa un enlace de YouTube.
-  2. Se consulta la API → getVideoInfo().
-  3. Se muestra la tarjeta con la información del video.
-  4. Se listan los formatos disponibles.
-  5. Al seleccionar un formato, se solicita la descarga → downloadVideo().
-  6. Se abre el archivo automáticamente.
-
-  Este componente NO guarda historial, ni elimina nada,
-  pues el backend eliminará el archivo al finalizar la descarga.
+  Componente principal del flujo de descarga con manejo de errores
+  del backend, descarga mediante Blob e indicador de progreso.
 */
 
 import { useState } from "react";
 import { videoService } from "../services/videoService";
+import { extractApiErrorMessage } from "../utils/errorHandler";
 
 import VideoInfoCard from "./VideoInfoCard";
 import FormatList from "./FormatList";
 import type { VideoFormat } from "../types/VideoFormat";
 import "./styles/VideoDownloader.css";
 
-
 const VideoDownloader = () => {
-  // URL ingresada por el usuario
   const [videoUrl, setVideoUrl] = useState("");
-
-  // Información retornada por el backend
   const [videoInfo, setVideoInfo] = useState<{
     title: string;
     thumbnail: string;
@@ -35,14 +24,16 @@ const VideoDownloader = () => {
     formats: VideoFormat[];
   } | null>(null);
 
-  // Estado de carga
-  const [loading, setLoading] = useState(false);
+  // Estados de carga separados
+  const [isFetchingInfo, setIsFetchingInfo] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState<number>(0);
 
-  // Errores
+  // Mensajes de error
   const [error, setError] = useState("");
 
   /**
-   * Consulta la API para obtener información del video
+   * 1. Consulta la API para obtener información del video
    */
   const handleFetchInfo = async () => {
     if (!videoUrl.trim()) {
@@ -51,67 +42,87 @@ const VideoDownloader = () => {
     }
 
     setError("");
-    setLoading(true);
+    setVideoInfo(null);
+    setIsFetchingInfo(true);
 
     try {
-      const info = await videoService.getVideoInfo(videoUrl);
+      const info = await videoService.getVideoInfo(videoUrl.trim());
       setVideoInfo(info);
     } catch (err) {
-      setError("No se pudo obtener la información del video.");
+      const message = await extractApiErrorMessage(
+        err,
+        "No se pudo obtener la información del video."
+      );
+      setError(message);
     } finally {
-      setLoading(false);
+      setIsFetchingInfo(false);
     }
   };
 
-  /**
-   * Maneja la tecla ENTER en el input
-   */
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
+    if (e.key === "Enter" && !isFetchingInfo) {
       handleFetchInfo();
     }
   };
 
   /**
-   * Solicita la descarga con el formato seleccionado
+   * 2. Solicita la descarga con el formato seleccionado y gestiona el Blob
    */
   const handleDownload = async (format: VideoFormat) => {
+    if (isDownloading) return;
+
+    setError("");
+    setIsDownloading(true);
+    setDownloadProgress(0);
+
     try {
-      setLoading(true);
+      const selectedExt = format.extension || format.ext || format.format || "mp4";
+      const selectedQuality = format.quality || "720p";
 
-      // 1. Obtenemos el archivo binario (Blob)
-      const blob = await videoService.downloadVideo({
-        url: videoUrl,
-        format: format.ext || format.format || "mp4", // Asegurar fallback
-        quality: format.quality || "720p",
-      });
+      const { blob, serverFilename } = await videoService.downloadVideo(
+        {
+          url: videoUrl.trim(),
+          format: selectedExt,
+          quality: selectedQuality,
+        },
+        (percent) => setDownloadProgress(percent)
+      );
 
-      // 2. Creamos una URL temporal para el Blob
-      const url = window.URL.createObjectURL(blob);
-      
-      // 3. Creamos el link de descarga
+      // Verificación extra: evitar descargar un archivo vacío o corrupto
+      if (!blob || blob.size === 0) {
+        throw new Error("El archivo recibido está vacío.");
+      }
+
+      const blobUrl = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
-      link.href = url;
-      
-      // Definimos el nombre del archivo. 
-      // Idealmente el backend manda el nombre en headers, pero por simplicidad usamos el título del video.
-      const safeTitle = (videoInfo?.title || "video").replace(/[^a-zA-Z0-9]/g, "_");
-      const extension = format.ext || format.format || "mp4";
-      link.setAttribute("download", `${safeTitle}.${extension}`);
-      
-      // 4. Ejecutamos click y limpieza
+      link.href = blobUrl;
+
+      // Usar el nombre del servidor si existe, o limpiar el título manteniendo legibilidad
+      const cleanTitle = (videoInfo?.title || "video")
+        .replace(/[\\/:"*?<>|]+/g, "_")
+        .trim()
+        .slice(0, 100);
+
+      link.setAttribute(
+        "download",
+        serverFilename || `${cleanTitle}.${selectedExt}`
+      );
+
       document.body.appendChild(link);
       link.click();
-      
-      // Limpieza
-      link.parentNode?.removeChild(link);
-      window.URL.revokeObjectURL(url);
 
+      // Limpieza de memoria en el navegador
+      link.remove();
+      window.URL.revokeObjectURL(blobUrl);
     } catch (err) {
-      console.error(err);
-      setError("No se pudo iniciar la descarga.");
+      const message = await extractApiErrorMessage(
+        err,
+        "No se pudo completar la descarga del archivo."
+      );
+      setError(message);
     } finally {
-      setLoading(false);
+      setIsDownloading(false);
+      setDownloadProgress(0);
     }
   };
 
@@ -123,18 +134,66 @@ const VideoDownloader = () => {
       <input
         type="text"
         className="video-input"
-        placeholder="Ingresa el enlace del video Ej: Youtube, Tik Tok, Instagram..."
+        placeholder="Ingresa el enlace del video Ej: YouTube, TikTok, Instagram..."
         value={videoUrl}
         onChange={(e) => setVideoUrl(e.target.value)}
-        onKeyDown={handleKeyDown} 
+        onKeyDown={handleKeyDown}
+        disabled={isFetchingInfo || isDownloading}
       />
 
-      <button className="video-btn" onClick={handleFetchInfo}>
-        {loading ? "Cargando..." : "Obtener Video"}
+      <button
+        className="video-btn"
+        onClick={handleFetchInfo}
+        disabled={isFetchingInfo || isDownloading}
+      >
+        {isFetchingInfo ? "Analizando enlace..." : "Obtener Video"}
       </button>
 
-      {/* Error visual */}
-      {error && <p style={{ color: "red", marginTop: "1rem" }}>{error}</p>}
+      {/* Mensaje de error amigable */}
+      {error && (
+        <div
+          style={{
+            color: "#b91c1c",
+            backgroundColor: "#fee2e2",
+            padding: "0.75rem 1rem",
+            borderRadius: "8px",
+            marginTop: "1rem",
+            border: "1px solid #f87171",
+          }}
+        >
+          {error}
+        </div>
+      )}
+
+      {/* Indicador de progreso durante la conversión y descarga */}
+      {isDownloading && (
+        <div style={{ marginTop: "1.25rem" }}>
+          <p style={{ marginBottom: "0.5rem", fontWeight: 500 }}>
+            {downloadProgress === 0
+              ? "Procesando y convirtiendo video (esto puede tardar unos segundos)..."
+              : `Descargando archivo a tu dispositivo: ${downloadProgress}%`}
+          </p>
+          <div
+            style={{
+              width: "100%",
+              height: "10px",
+              backgroundColor: "#e5e7eb",
+              borderRadius: "999px",
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                width: `${downloadProgress === 0 ? 100 : downloadProgress}%`,
+                height: "100%",
+                backgroundColor: downloadProgress === 0 ? "#f59e0b" : "#10b981",
+                transition: "width 0.3s ease",
+                opacity: downloadProgress === 0 ? 0.7 : 1,
+              }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Mostrar información del video */}
       {videoInfo && (
