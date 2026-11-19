@@ -2,9 +2,11 @@
 app/main.py
 ----------------------------------
 Punto de entrada del backend Link2Video.
-Inicia FastAPI, configura CORS, eventos y registra routers.
+Inicia FastAPI, configura CORS, gestiona el ciclo de vida (lifespan) y registra routers.
 """
 
+import os
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,40 +16,45 @@ from app.core.config import settings
 from app.database.connection import connect_to_mongo, close_mongo_connection
 from app.routers import video_info_router, video_download_router 
 
-#  Inicialización de la app
+
+# Gestión moderna del ciclo de vida (reemplaza a @app.on_event)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # --- Inicio de la aplicación (Startup) ---
+    os.makedirs("downloads", exist_ok=True)
+    await connect_to_mongo()
+    yield
+    # --- Apagado de la aplicación (Shutdown) ---
+    await close_mongo_connection()
+
+
+# Inicialización de la app
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.VERSION,
     debug=settings.DEBUG,
+    lifespan=lifespan,
 )
 
-#  Configuración de CORS
+# Configuración de CORS (incluye expose_headers para leer Content-Disposition en el frontend)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["Content-Disposition"],
 )
 
-#  Montar archivos estáticos
+# Asegurar directorio antes de montar archivos estáticos
+os.makedirs("downloads", exist_ok=True)
 app.mount("/downloads", StaticFiles(directory="downloads"), name="downloads")
 
-#  Eventos de conexión MongoDB
-@app.on_event("startup")
-async def startup_db():
-    await connect_to_mongo()
-
-@app.on_event("shutdown")
-async def shutdown_db():
-    await close_mongo_connection()
-
-#  Registro de routers
+# Registro de routers
 app.include_router(video_info_router.router, prefix="/api/video", tags=["Video"])
 app.include_router(video_download_router.router, prefix="/api/video", tags=["Video"])
-# app.include_router(jobs_router.router, prefix="/api/jobs", tags=["Jobs"])
 
-#  Endpoint raíz
+# Endpoint raíz
 @app.get("/", tags=["Root"])
 async def root():
-    return {"message": "✅ Link2Video API en ejecución correctamente !"}
+    return {"message": "✅ Link2Video API en ejecución correctamente"}
