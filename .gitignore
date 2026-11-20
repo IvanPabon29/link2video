@@ -1,0 +1,19 @@
+# Entornos virtuales (Backend)
+.venv/
+venv/
+backend/.venv/
+backend/venv/
+
+# Caché de Python
+**/__pycache__/
+**/*.pyc
+
+# Variables de entorno
+.env
+backend/.env
+frontend/.env
+
+# Binarios locales y descargas temporales
+**/ffmpeg.exe
+**/ffmpeg
+**/downloads/
